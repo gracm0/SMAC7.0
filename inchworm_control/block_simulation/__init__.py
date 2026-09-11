@@ -1,3 +1,4 @@
-from inchworm_control import blueprint as BP
+# from inchworm_control import blueprint as BP
 
-BP.blueprint()
+# BP.blueprint()
+"""block_simulation package."""

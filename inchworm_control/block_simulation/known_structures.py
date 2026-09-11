@@ -1,7 +1,7 @@
 ## KNOWN STRUCTURES DEFINED HERE 
 ## CANNOT BE NEGATIVE
 # the order of blocks is order of how the blocks will be placed
-from config import LARGE_BUILD
+from . config import LARGE_BUILD
 
 if LARGE_BUILD:
 

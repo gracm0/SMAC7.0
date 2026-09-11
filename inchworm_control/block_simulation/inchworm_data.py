@@ -1,7 +1,7 @@
 from enum import Enum
 import copy
-from config import *
-import map_data
+from . config import *
+from . import map_data
 from inchworm_control.blueprint import blueprint as blueprint
 from time import sleep
 import serial

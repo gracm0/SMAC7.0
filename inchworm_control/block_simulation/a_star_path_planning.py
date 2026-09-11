@@ -1,5 +1,5 @@
 import heapq
-from map_data import *
+from . map_data import *
 
 def heuristic(a, b):
     return abs(a.x - b.x) + abs(a.y - b.y) + abs(a.z - b.z) # manhattan

@@ -10,11 +10,11 @@ is located at its final position from the beginning.
 '''
 
 import copy
-from config import *
+from . config import *
 # from inchworm_data import Inchworm
-import map_data
-from search import search
-from inchworm_data import Inchworm
+from . import map_data
+from . search import search
+from . inchworm_data import Inchworm
 from colorama import Fore, init
 import numpy as np
 import itertools
