@@ -1,5 +1,5 @@
 import numpy as np
-from known_structures import known_structures
+from . known_structures import known_structures
 
 # shifts all block positions so that corner of strucutre is at (0, 0, 0)
 def shift_to_origin(blocks_placed):

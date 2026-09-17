@@ -1,11 +1,10 @@
 from enum import IntEnum
 import numpy as np
-from config import *
-import bfs_path_planning
-import d_star_lite_path_planning
+from . config import *
+from . bfs_path_planning import *
+from . import d_star_lite_path_planning
 from colorama import Fore, init
 init(autoreset=True)
-from inchworm_data import Inchworm
 import heapq
 
 class GridStatus(IntEnum):

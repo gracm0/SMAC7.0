@@ -11,10 +11,10 @@ when spawning a block, a Vec3 is used with xzy rather than xyz. If it's not a Vo
 from ursina import *
 from ursina.prefabs.first_person_controller import FirstPersonController
 import random 
-from search import search
-from config import *
+from . search import search
+from . config import *
 import copy 
-from sim_data import SimData
+from . sim_data import SimData
 
 app = Ursina()
 sim_data = SimData()
@@ -282,7 +282,7 @@ def generate_final_structure():
 class Voxel(Button):
     def __init__(self, position = (0, 0, 0), texture = white_block_texture, bk_color=None):
         if bk_color is None: 
-            bk_color = color.color(0, 0, random.uniform(0.9, 1))
+            bk_color = color.hsv(0, 0, random.uniform(0.9, 1))
         super().__init__(
             parent = scene,
             position = position,

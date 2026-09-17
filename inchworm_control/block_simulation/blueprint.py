@@ -1,8 +1,8 @@
 import numpy as np
 from collections import defaultdict
-from config import SEED_BK
+from . config import SEED_BK
 import json
-import map_data 
+from . import map_data 
 
 # x: row in array (7 rows)
 # y: layer (6 layers)

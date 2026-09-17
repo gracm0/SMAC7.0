@@ -1,5 +1,5 @@
 import heapq
-import map_data
+from . import map_data
 from colorama import Fore, init
 init(autoreset=True)
 
