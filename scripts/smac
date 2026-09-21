@@ -1,0 +1,361 @@
+#!/usr/bin/env bash
+
+set -e
+
+# ============================================================
+# Configuration
+# These values are set by setup.sh during installation.
+# ============================================================
+
+CONFIG="${SMAC_CONFIG:-$HOME/.config/smac/config}"
+
+if [[ ! -f "$CONFIG" ]]; then
+    echo "ERROR: SMAC configuration not found:"
+    echo "  $CONFIG"
+    echo
+    echo "Run scripts/setup.sh first."
+    exit 1
+fi
+
+source "$CONFIG"
+
+
+# ============================================================
+# Helpers
+# ============================================================
+
+in_docker() {
+    [[ "${SMAC_IN_DOCKER:-0}" == "1" ]]
+}
+
+using_docker() {
+    [[ "${USE_DOCKER:-false}" == "true" ]]
+}
+
+require_docker() {
+    if ! using_docker; then
+        echo "ERROR: Docker is not enabled for this SMAC environment."
+        echo
+        echo "Re-run setup.sh and enable Docker to use this command."
+        exit 1
+    fi
+}
+
+
+docker_running() {
+    [[ "$(docker compose -f "$COMPOSE_FILE" ps --status running -q robot-dev)" != "" ]]
+}
+
+
+ensure_docker() {
+    if ! docker_running; then
+        echo "Starting SMAC Docker environment..."
+        docker compose -f "$COMPOSE_FILE" up -d
+    fi
+}
+
+
+local_shell() {
+
+    if in_docker; then
+
+        exec bash
+
+    elif using_docker; then
+
+        ensure_docker
+        docker compose -f "$COMPOSE_FILE" exec robot-dev bash
+
+    else
+
+        cd "$LOCAL_WS"
+        source /opt/ros/humble/setup.bash
+
+        if [[ -f install/setup.bash ]]; then
+            source install/setup.bash
+        fi
+
+        exec bash
+    fi
+}
+
+local_build() {
+    echo "Building local workspace..."
+
+    if in_docker; then
+
+        cd /robot_ws
+        colcon build --symlink-install
+
+    elif using_docker; then
+
+        ensure_docker
+
+        docker compose -f "$COMPOSE_FILE" exec robot-dev bash -lc \
+            "cd /robot_ws && colcon build --symlink-install"
+
+    else
+
+        cd "$LOCAL_WS"
+        source /opt/ros/humble/setup.bash
+        colcon build --symlink-install
+
+    fi
+}
+
+push_remote() {
+
+    local LOCAL_SRC="$LOCAL_WS/src"
+
+    echo "Preparing to sync source..."
+    echo
+
+    # --------------------------------------------------------
+    # Safety checks
+    # --------------------------------------------------------
+
+    if [[ -z "$LOCAL_WS" ]]; then
+        echo "ERROR: LOCAL_WS is not configured."
+        exit 1
+    fi
+
+    if [[ "$LOCAL_WS" != /* ]]; then
+        echo "ERROR: LOCAL_WS is not an absolute path:"
+        echo "  $LOCAL_WS"
+        exit 1
+    fi
+
+    if [[ ! -d "$LOCAL_SRC" ]]; then
+        echo "ERROR: Local ROS src directory does not exist:"
+        echo "  $LOCAL_SRC"
+        exit 1
+    fi
+
+    if [[ -z "$REMOTE_WS" ]]; then
+        echo "ERROR: REMOTE_WS is not configured."
+        exit 1
+    fi
+
+    if [[ "$REMOTE_WS" != /* ]]; then
+        echo "ERROR: REMOTE_WS is not an absolute path:"
+        echo "  $REMOTE_WS"
+        exit 1
+    fi
+
+    # --------------------------------------------------------
+    # Show exactly what is about to happen
+    # --------------------------------------------------------
+
+    echo "Local source:"
+    echo "  $LOCAL_SRC/"
+    echo
+    echo "Remote destination:"
+    echo "  $REMOTE_HOST:$REMOTE_WS/src/"
+    echo
+
+    # --------------------------------------------------------
+    # Sync
+    # --------------------------------------------------------
+
+    rsync -avz --delete \
+        --exclude '.git/' \
+        "$LOCAL_SRC/" \
+        "$REMOTE_HOST:$REMOTE_WS/src/"
+
+    echo
+    echo "Sync complete."
+}
+
+
+remote_build() {
+    echo "Building on $REMOTE_HOST..."
+
+    ssh -t "$REMOTE_HOST" \
+        "cd '$REMOTE_WS' && \
+         source /opt/ros/humble/setup.bash && \
+         colcon build --symlink-install"
+}
+
+
+remote_shell() {
+    ssh -t "$REMOTE_HOST" \
+        "cd '$REMOTE_WS' && \
+         source /opt/ros/humble/setup.bash && \
+         if [ -f install/setup.bash ]; then
+             source install/setup.bash
+         fi; \
+         exec bash --noprofile --norc"
+}
+
+
+remote_run() {
+    if [[ $# -eq 0 ]]; then
+        echo "Usage: smac run --remote <command>"
+        exit 1
+    fi
+
+    # Quote arguments so commands with spaces/arguments survive SSH.
+    printf -v REMOTE_COMMAND '%q ' "$@"
+
+    ssh -t "$REMOTE_HOST" \
+        "cd '$REMOTE_WS' && \
+         source /opt/ros/humble/setup.bash && \
+         if [ -f install/setup.bash ]; then
+             source install/setup.bash
+         fi; \
+         $REMOTE_COMMAND"
+}
+
+
+show_help() {
+    cat <<EOF
+SMAC Development CLI
+
+Usage:
+  smac <command> [options]
+
+Shell:
+  smac shell
+      Open a shell in the local Humble Docker container.
+      Starts the container automatically if necessary.
+
+  smac shell --remote
+      SSH into the robot, enter the ROS workspace, and source it.
+
+Docker:
+  smac docker down
+      Stop and remove the development container.
+
+  smac docker build
+      Build the development Docker image.
+
+  smac docker status
+      Show Docker container status.
+
+Sync:
+  smac push
+      Sync the local src directory to the robot using rsync.
+
+Build:
+  smac build
+  smac build --all
+      Build locally, push source to robot, then build remotely.
+
+  smac build --local
+      Build only inside the local Docker container.
+
+  smac build --remote
+      Push source to the robot and build on the robot.
+
+Run:
+  smac run --remote <command>
+      Run a command inside the robot's ROS environment.
+
+Examples:
+  smac shell
+  smac shell --remote
+  smac push
+  smac build
+  smac build --local
+  smac build --remote
+  smac run --remote ros2 topic list
+  smac run --remote ros2 launch smac bringup.launch.py
+EOF
+}
+
+
+# ============================================================
+# Main CLI
+# ============================================================
+
+case "${1:-help}" in
+
+    shell)
+        if [[ "${2:-}" == "--remote" ]]; then
+            remote_shell
+        else
+            local_shell
+        fi
+        ;;
+
+
+    docker)
+        require_docker
+
+        case "${2:-}" in
+            down)
+                docker compose -f "$COMPOSE_FILE" down
+                ;;
+
+            build)
+                docker compose -f "$COMPOSE_FILE" build
+                ;;
+
+            status)
+                docker compose -f "$COMPOSE_FILE" ps
+                ;;
+
+            *)
+                echo "Usage: smac docker {down|build|status}"
+                exit 1
+                ;;
+        esac
+        ;;
+
+
+    push)
+        push_remote
+        ;;
+
+
+    build)
+        case "${2:---all}" in
+
+            --all)
+                local_build
+                push_remote
+                remote_build
+                ;;
+
+            --local)
+                local_build
+                ;;
+
+            --remote)
+                push_remote
+                remote_build
+                ;;
+
+            *)
+                echo "Unknown build option: $2"
+                echo "Usage: smac build [--all|--local|--remote]"
+                exit 1
+                ;;
+        esac
+        ;;
+
+
+    run)
+        if [[ "${2:-}" != "--remote" ]]; then
+            echo "Usage: smac run --remote <command>"
+            exit 1
+        fi
+
+        shift 2
+        remote_run "$@"
+        ;;
+
+
+    help|--help|-h)
+        show_help
+        ;;
+
+
+    *)
+        echo "Unknown command: $1"
+        echo
+        show_help
+        exit 1
+        ;;
+
+esac
