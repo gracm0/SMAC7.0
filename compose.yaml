@@ -1,0 +1,29 @@
+services:
+  robot-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    network_mode: host
+
+    environment:
+      DISPLAY: ${DISPLAY}
+      ROS_DOMAIN_ID: 0
+      SMAC_IN_DOCKER: "1"
+
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+
+      - ../..:/robot_ws
+      - ./scripts/smac:/usr/local/bin/smac:ro
+      - ~/.config/smac:/root/.config/smac:ro
+
+      - ~/.ssh:/root/.ssh:ro
+
+    devices:
+      - /dev/dri:/dev/dri
+
+    stdin_open: true
+    tty: true
+
+    command: sleep infinity
