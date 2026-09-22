@@ -50,7 +50,8 @@ congif.py file includes the location of Block Depot, initial position and orient
 | `F` | Enable flying and different camera angles |
 | `QE` | Fly up/down |
 | `1234` | Switch cameras |
-| `ESC` | Exit simulation |
+| `ESC` | Pause simulation and release mouse; press again while paused to exit |
+| `Left Click while paused` | Resume simulation |
 
 ## Demo usage 
 1. Build any structure you want to display in the workspace. 

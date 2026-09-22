@@ -10,12 +10,9 @@ This guide is for setting up and running the simulation from scratch, based on:
 
 ```powershell
 cd C:\Users\<USERNAME>\Documents\GitHub\SMAC7.0
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
 pip install --upgrade pip
 pip install ursina numpy colorama pyserial
-cd .\inchworm_control
-python -m block_simulation.sim
+python -m inchworm_control.block_simulation.sim
 ```
 
 ---
@@ -32,16 +29,18 @@ python -m block_simulation.sim
 
 ---
 
-## 1) Create and activate a virtual environment (Windows / PowerShell)
+## 1) Create a virtual environment in VS Code
 
-From repo root (`SMAC7.0`):
+In VS Code:
 
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-```
+1. Press `Ctrl+Shift+P` to open the Command Palette.
+2. Select `Python: Select Interpreter`.
+3. Select `+ Create Virtual Environment`.
+4. Choose `Venv`, then choose the Python interpreter to use.
 
-If activation is blocked:
+VS Code creates and selects the `.venv` environment for the workspace.
+
+If PowerShell activation is blocked when opening a new terminal:
 
 ```powershell
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
@@ -72,7 +71,14 @@ pip install ursina numpy colorama pyserial
 
 ## 3) Run the simulation (important)
 
-Change into `inchworm_control` and run as a module:
+From the repository root, run the fully qualified module:
+
+```powershell
+cd C:\Users\<USERNAME>\Documents\GitHub\SMAC7.0
+python -m inchworm_control.block_simulation.sim
+```
+
+The shorter legacy form also works after changing into `inchworm_control`:
 
 ```powershell
 cd C:\Users\<USERNAME>\Documents\GitHub\SMAC7.0\inchworm_control
@@ -110,17 +116,18 @@ From the original README flow:
 - `F`: toggle flying
 - `Q` / `E`: fly up/down
 - `1` `2` `3` `4`: switch camera viewpoints
-- `ESC`: exit simulation
+- `ESC`: pause simulation and release the mouse; press again while paused to exit
+- Left click while paused: resume simulation
 
 ---
 
 ## 6) Troubleshooting (including issues hit in this session)
 
 ### `ModuleNotFoundError` for local modules (`search`, `inchworm_control`, etc.)
-- Run from `...\inchworm_control`
+- Run from the repository root:
 - Use:
   ```powershell
-  python -m block_simulation.sim
+  python -m inchworm_control.block_simulation.sim
   ```
 
 ### `ModuleNotFoundError` for `numpy`, `colorama`, or `serial`
@@ -135,37 +142,15 @@ From the original README flow:
 
 ---
 
-## 7) Code changes made during setup
 
-These are the repo-specific fixes that were needed to get the project running reliably in this environment:
-
-- Fixed package import structure in `block_simulation` so modules import correctly when launched with `python -m block_simulation.sim`.
-- Converted internal imports from plain module names to relative package imports (for example: `from .search import search`, `from .config import *`, `from .sim_data import SimData`).
-- Removed the side-effect import from `block_simulation/__init__.py` that was calling `BP.blueprint()` during import.
-- Installed missing Python dependencies in the venv: `numpy`, `colorama`, `pyserial`.
-- Patched Ursina compatibility in `sim.py` by replacing the deprecated call:
-  ```python
-  color.color(0, 0, random.uniform(0.9, 1))
-  ```
-  with:
-  ```python
-  color.hsv(0, 0, random.uniform(0.9, 1))
-  ```
-- Confirmed the simulation starts successfully once launched from the correct working directory with the module entry point.
-
----
-
-## 8) Summary
+## 7) Summary
 
 This repository is a Python + Ursina simulation project. The simplest setup is:
 
-1. Create `.venv`
-2. Activate it
+1. Press `Ctrl+Shift+P` and select `Python: Select Interpreter`.
+2. Select `+ Create Virtual Environment`, choose `Venv`, and select the Python interpreter.
 3. Install packages with `pip install ursina numpy colorama pyserial`
-4. Run from `inchworm_control` with:
+4. Run from the repository root with:
    ```powershell
-   python -m block_simulation.sim
+  python -m inchworm_control.block_simulation.sim
    ```
-
-This is the exact working path that was validated in this session.
-

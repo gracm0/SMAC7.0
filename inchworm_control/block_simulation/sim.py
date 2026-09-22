@@ -55,11 +55,41 @@ key_n_pressed = False
 key_p_pressed, key_l_pressed = False, False
 key_k_pressed = False
 key = None
+paused = False
+resume_requested = False
+pause_text = Text("Paused", origin=(0, 0), scale=2, enabled=False)
+
+def input(key):
+    global paused, resume_requested
+    if key == "escape":
+        if paused:
+            stop_simulation()
+        else:
+            paused = True
+            pause_text.enabled = True
+            mouse.locked = False
+            mouse.visible = True
+            mouse.raycast = False
+            mouse.hovered_entity = None
+            mouse.unhover_everything_not_hit()
+            player.enabled = False
+    elif key == "left mouse down" and paused:
+        resume_requested = True
 
 # Updates every frame
 def update():
-    global key_g_pressed, key_l_pressed, key_t_pressed, key_p_pressed, key_n_pressed, key_k_pressed
+    global key_g_pressed, key_l_pressed, key_t_pressed, key_p_pressed, key_n_pressed, key_k_pressed, paused, resume_requested
 
+    if paused:
+        if resume_requested:
+            paused = False
+            resume_requested = False
+            pause_text.enabled = False
+            mouse.locked = True
+            mouse.visible = False
+            mouse.raycast = True
+            player.enabled = True
+        return
 
     # Generate the pyramid coordinates
     if held_keys["g"] and not key_g_pressed:
@@ -251,6 +281,8 @@ class Voxel(Button):
 
     # What happens to blocks on mouse inputs
     def input(self, key):
+        if paused:
+            return
         if self.hovered:
             if key == "left mouse down":
                 voxel = Voxel(position = self.position + mouse.normal, texture = smart_block_texture) 
@@ -269,8 +301,8 @@ class Voxel(Button):
                     print("Block not found")
                 destroy(self)
                 
-        if key == "escape":
-            stop_simulation()
+        # if key == "escape":
+        #     stop_simulation()
 
 # Skybox
 class Sky(Entity):
